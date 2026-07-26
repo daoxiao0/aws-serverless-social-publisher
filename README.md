@@ -18,23 +18,26 @@ can be authored once and delivered anywhere.
 
 ## Architecture
 
-```
-   content repository (source of truth)
-            |
-            |  GitHub Actions, on push
-            v
-          S3  (mirror)
-            |
-            v
-   EventBridge Scheduler ---> Lambda ---> LinkedIn API
-                                |
-                    +-----------+-----------+
-                    v           v           v
-               DynamoDB   Secrets Mgr   CloudWatch
-               (state)     (token)      (logs, metrics)
-                                            |
-                                            v
-                                          SNS (alerts)
+```mermaid
+flowchart TB
+    MD["Content repository<br/><i>source of truth</i>"]
+    S3[("S3<br/><i>mirror</i>")]
+    SCH["EventBridge Scheduler<br/><i>weekdays, your timezone</i>"]
+    LAMBDA["Lambda<br/><i>publisher</i>"]
+    SM[("Secrets Manager<br/><i>token + client credentials</i>")]
+    DDB[("DynamoDB<br/><i>publication state</i>")]
+    LI["LinkedIn API"]
+    CW["CloudWatch<br/><i>logs, metrics, alarms</i>"]
+    SNS(["SNS<br/><i>failure and expiry alerts</i>"])
+
+    MD -->|"GitHub Actions, OIDC, on push"| S3
+    SCH --> LAMBDA
+    S3 -->|"read next post"| LAMBDA
+    SM -->|"read token"| LAMBDA
+    LAMBDA <-->|"claim, then record"| DDB
+    LAMBDA -->|"POST /rest/posts"| LI
+    LAMBDA --> CW
+    CW --> SNS
 ```
 
 The content repository stays authoritative; S3 is a cache that can be rebuilt
@@ -136,8 +139,15 @@ package carries no third-party code.
 
 ## Design decisions
 
-Recorded as ADRs in [docs/adr](docs/adr), including the alternatives that were
-rejected and why.
+Recorded as ADRs, including the alternatives that were rejected and why.
+
+| | Decision |
+| --- | --- |
+| [0001](docs/adr/0001-content-source-is-mirrored-to-s3.md) | The content repository stays the source of truth, mirrored to S3 |
+| [0002](docs/adr/0002-publication-state-lives-in-dynamodb.md) | Publication state lives in DynamoDB, not in filenames |
+| [0003](docs/adr/0003-glossary-inline.md) | The glossary is published inline, because commenting is partner-gated |
+| [0004](docs/adr/0004-access-token-lifecycle.md) | Token expiry is a scheduled event, and is read from LinkedIn rather than recorded |
+| [0005](docs/adr/0005-trust-github-by-immutable-ids.md) | CI is trusted by immutable repository ID, not by name |
 
 ## License
 
