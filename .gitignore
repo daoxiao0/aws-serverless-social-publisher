@@ -15,6 +15,9 @@
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
+# Saved plans embed variable values and resource attributes.
+tfplan
+*.tfplan
 
 # Python
 __pycache__/

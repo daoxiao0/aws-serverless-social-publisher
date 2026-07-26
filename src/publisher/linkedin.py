@@ -12,9 +12,15 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Callable, NamedTuple
 
 API_BASE = "https://api.linkedin.com"
+
+#: Token introspection lives on the sign-in host, not the API host, and
+#: authenticates with client credentials rather than a bearer token.
+OAUTH_BASE = "https://www.linkedin.com"
 
 #: LinkedIn versions its API by month. Bump deliberately, not automatically:
 #: a version LinkedIn has sunset returns 400 on every call.
@@ -33,7 +39,7 @@ Transport = Callable[[str, str, dict, bytes | None], Response]
 class LinkedInError(RuntimeError):
     """A LinkedIn API call failed."""
 
-    def __init__(self, message: str, status: int, body: str = ""):
+    def __init__(self, message: str, status: int = 0, body: str = ""):
         super().__init__(message)
         self.status = status
         self.body = body
@@ -66,6 +72,71 @@ def urllib_transport(method: str, url: str, headers: dict, body: bytes | None) -
             return Response(response.status, dict(response.headers), response.read().decode("utf-8", "replace"))
     except urllib.error.HTTPError as error:
         return Response(error.code, dict(error.headers), error.read().decode("utf-8", "replace"))
+
+
+@dataclass(frozen=True)
+class TokenInfo:
+    """What LinkedIn says about an access token."""
+
+    active: bool
+    status: str
+    expires_at: datetime | None
+    scopes: frozenset[str]
+
+    @property
+    def days_remaining(self) -> float | None:
+        if self.expires_at is None:
+            return None
+        return (self.expires_at - datetime.now(timezone.utc)).total_seconds() / 86400
+
+    def grants(self, scope: str) -> bool:
+        return scope in self.scopes
+
+
+def introspect(
+    access_token: str,
+    client_id: str,
+    client_secret: str,
+    *,
+    oauth_base: str = OAUTH_BASE,
+    transport: Transport = None,  # type: ignore[assignment]
+) -> TokenInfo:
+    """Ask LinkedIn when this token expires, instead of assuming.
+
+    The alternative is recording the expiry by hand at authorization time,
+    which is wrong the moment somebody re-authorizes and forgets to update it
+    — exactly the silent failure the expiry alarm exists to prevent.
+
+    Also reports ``revoked``. LinkedIn reserves the right to revoke tokens
+    early, so "not expired yet" is not the same as "usable".
+    """
+    transport = transport or urllib_transport
+    body = urllib.parse.urlencode(
+        {"client_id": client_id, "client_secret": client_secret, "token": access_token}
+    ).encode()
+    response = transport(
+        "POST",
+        oauth_base.rstrip("/") + "/oauth/v2/introspectToken",
+        {"Content-Type": "application/x-www-form-urlencoded"},
+        body,
+    )
+    if response.status != 200:
+        # 400 is a bad client id or token, 401 a bad client secret. Neither is
+        # worth distinguishing at the call site: both mean "fix the secret".
+        raise LinkedInError(
+            "token introspection returned %d" % response.status,
+            response.status,
+            response.body,
+        )
+
+    payload = json.loads(response.body)
+    expires_at = payload.get("expires_at")
+    return TokenInfo(
+        active=bool(payload.get("active")),
+        status=payload.get("status", "unknown"),
+        expires_at=datetime.fromtimestamp(expires_at, timezone.utc) if expires_at else None,
+        scopes=frozenset(s.strip() for s in payload.get("scope", "").split(",") if s.strip()),
+    )
 
 
 class LinkedInClient:

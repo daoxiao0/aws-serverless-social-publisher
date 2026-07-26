@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 import boto3
 
 from .content import ContentStore
-from .linkedin import LinkedInClient, TokenExpiredError
+from .linkedin import LinkedInClient, TokenExpiredError, introspect
 from .parser import parse
 from .renderer import render
 from .state import AlreadyPublishedError, PublicationState
@@ -24,13 +24,17 @@ logger.setLevel(logging.INFO)
 
 METRIC_NAMESPACE = "SocialPublisher"
 
+#: Without this scope the token cannot create posts, so there is no point
+#: reaching the LinkedIn call to find out.
+POSTING_SCOPE = "w_member_social"
+
 
 def lambda_handler(event, context):  # noqa: ARG001 - signature fixed by Lambda
     settings = Settings.from_environment()
     session = boto3.Session()
 
     secret = _load_secret(session, settings.secret_id)
-    _report_token_lifetime(session, secret.get("expires_at"))
+    _check_token(session, settings, secret)
 
     store = ContentStore(session.client("s3"), settings.bucket, settings.prefix)
     state = PublicationState(session.resource("dynamodb").Table(settings.table))
@@ -109,21 +113,58 @@ def _load_secret(session, secret_id: str) -> dict:
     return json.loads(payload["SecretString"])
 
 
-def _report_token_lifetime(session, expires_at: str | None) -> None:
-    """Publish days-until-expiry so an alarm can fire before things break.
+def _check_token(session, settings: "Settings", secret: dict) -> None:
+    """Verify the token and publish how much life it has left.
 
     The token cannot be refreshed programmatically, so this metric is the only
-    warning available. See docs/adr/0004-access-token-lifecycle.md.
+    warning available before publishing stops. See
+    docs/adr/0004-access-token-lifecycle.md.
     """
-    if not expires_at:
-        logger.warning("secret has no expires_at; token expiry cannot be monitored")
+    info = None
+    if secret.get("client_id") and secret.get("client_secret"):
+        info = introspect(secret["access_token"], secret["client_id"], secret["client_secret"])
+    else:
+        logger.warning(
+            "no client credentials in the secret; falling back to the stored "
+            "expires_at, which nothing verifies"
+        )
+
+    remaining = info.days_remaining if info else _days_until(secret.get("expires_at"))
+    if remaining is None:
+        logger.warning("token expiry is unknown; it cannot be monitored")
+    else:
+        logger.info("access token expires in %.1f days", remaining)
+        session.client("cloudwatch").put_metric_data(
+            Namespace=METRIC_NAMESPACE,
+            MetricData=[
+                {"MetricName": "DaysUntilTokenExpiry", "Value": remaining, "Unit": "Count"}
+            ],
+        )
+
+    if info is None:
         return
-    remaining = (datetime.fromisoformat(expires_at) - datetime.now(timezone.utc)).days
-    logger.info("access token expires in %d days", remaining)
-    session.client("cloudwatch").put_metric_data(
-        Namespace=METRIC_NAMESPACE,
-        MetricData=[{"MetricName": "DaysUntilTokenExpiry", "Value": remaining, "Unit": "Count"}],
-    )
+
+    # Expiry is not the only way a token stops working: LinkedIn can revoke
+    # one at any time for technical or policy reasons.
+    if not info.active:
+        _notify(session, settings.topic_arn, "LinkedIn token is not usable",
+                "Introspection reports status=%s. Re-authorize following "
+                "docs/setup-linkedin-app.md." % info.status)
+        raise TokenExpiredError("token is not active (status=%s)" % info.status)
+
+    if not info.grants(POSTING_SCOPE):
+        _notify(session, settings.topic_arn, "LinkedIn token is missing a scope",
+                "The token does not grant %s, so it cannot publish. Scopes: %s"
+                % (POSTING_SCOPE, ", ".join(sorted(info.scopes)) or "none"))
+        raise RuntimeError("token does not grant %s" % POSTING_SCOPE)
+
+
+def _days_until(expires_at: str | None) -> float | None:
+    """Fallback for secrets that carry only a hand-entered expiry."""
+    if not expires_at:
+        return None
+    delta = datetime.fromisoformat(expires_at) - datetime.now(timezone.utc)
+    return delta.total_seconds() / 86400
 
 
 def _notify(session, topic_arn: str, subject: str, message: str) -> None:

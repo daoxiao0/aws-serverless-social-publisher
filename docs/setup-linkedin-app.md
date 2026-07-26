@@ -18,6 +18,7 @@ is already written.
 | Post to your own profile | **Yes** — `POST /rest/posts` |
 | Delete your own post | **Yes** — `DELETE /rest/posts/{urn}` |
 | Read your own identity | **Yes** — `GET /v2/userinfo` |
+| Check when the token expires | **Yes** — `POST /oauth/v2/introspectToken` |
 | **Comment on a post** | **No** — partner-gated, see below |
 | **Refresh token** | **No** — partner-gated, see below |
 | Rate limit | 150 requests per day per member |
@@ -115,8 +116,10 @@ Approve the consent screen. The access token appears in the dialog. It is
 valid for 60 days, and there is no refresh token — that is expected, not a
 misconfiguration.
 
-**Note the date.** You will want the expiry timestamp when you store the
-token; the pipeline alarms on it.
+While you are on the **Auth** tab, also copy the **Client ID** and the
+**Primary Client Secret**. They are not needed to publish, but they are what
+lets the pipeline ask LinkedIn when the token really expires instead of
+trusting a date somebody typed in by hand.
 
 ## 7. Store the token
 
@@ -133,13 +136,29 @@ chmod 600 ~/.linkedin_token
 Set-Content -Path "$env:USERPROFILE\.linkedin_token" -Value 'YOUR_TOKEN' -NoNewline
 ```
 
-For deployment, the token belongs in Secrets Manager alongside its expiry:
+For deployment, the token belongs in Secrets Manager together with the client
+credentials:
+
+```json
+{
+  "access_token": "YOUR_TOKEN",
+  "client_id": "YOUR_CLIENT_ID",
+  "client_secret": "YOUR_CLIENT_SECRET",
+  "expires_at": "2026-09-24T00:00:00Z"
+}
+```
 
 ```bash
-aws secretsmanager create-secret \
-  --name linkedin/access-token \
-  --secret-string '{"access_token":"YOUR_TOKEN","expires_at":"2026-09-24T00:00:00Z"}'
+aws secretsmanager put-secret-value \
+  --secret-id linkedin/access-token \
+  --secret-string file://secret.json   # then delete the file
 ```
+
+`expires_at` is a fallback. When the client credentials are present the
+pipeline calls token introspection and uses the expiry LinkedIn reports, so
+the hand-written date stops mattering — which is the point, because a
+hand-written date is wrong the first time somebody re-authorizes and forgets
+to update it.
 
 `.gitignore` in this repository already excludes `.linkedin_token`,
 `.linkedin_client`, `.env`, and `*.tfvars`. Verify with `git status` before
@@ -170,11 +189,13 @@ Once every 60 days, or whenever the API starts returning 401:
 ```bash
 aws secretsmanager put-secret-value \
   --secret-id linkedin/access-token \
-  --secret-string '{"access_token":"NEW_TOKEN","expires_at":"YYYY-MM-DDT00:00:00Z"}'
+  --secret-string file://secret.json   # same fields, new access_token
 ```
 
-Nothing else changes. The app, the products, and the page verification all
-persist; only the token expires.
+Nothing else changes. The app, the products, the page verification, and the
+client credentials all persist; only the token expires. If introspection is
+configured you do not need to touch `expires_at` at all — the next run reads
+the real value from LinkedIn.
 
 ---
 
