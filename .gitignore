@@ -7,12 +7,14 @@
 .linkedin_client
 
 # Terraform
+# The dependency lock file is intentionally NOT ignored: committing it pins
+# provider versions for everyone who deploys this.
 .terraform/
+.terraform.tfstate.lock.info
 *.tfstate
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
-.terraform.lock.hcl
 
 # Python
 __pycache__/

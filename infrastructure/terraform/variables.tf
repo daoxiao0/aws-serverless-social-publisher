@@ -1,0 +1,81 @@
+variable "project" {
+  description = "Name prefix for every resource."
+  type        = string
+  default     = "social-publisher"
+}
+
+variable "environment" {
+  description = "Environment name, used in resource names and tags."
+  type        = string
+  default     = "prod"
+}
+
+variable "region" {
+  description = "AWS region to deploy into."
+  type        = string
+  default     = "ap-northeast-1"
+}
+
+variable "content_prefix" {
+  description = "Key prefix inside the content bucket where posts are mirrored."
+  type        = string
+  default     = "posts/"
+}
+
+variable "schedule_expression" {
+  description = "When to publish. Weekdays only by default."
+  type        = string
+  default     = "cron(0 8 ? * MON-FRI *)"
+}
+
+variable "schedule_timezone" {
+  description = <<-EOT
+    Timezone for schedule_expression. EventBridge Scheduler interprets cron in
+    UTC unless this is set, which would silently shift an 08:00 schedule to
+    17:00 local time in JST.
+  EOT
+  type        = string
+  default     = "Asia/Tokyo"
+}
+
+variable "post_visibility" {
+  description = "LinkedIn post visibility: PUBLIC or CONNECTIONS."
+  type        = string
+  default     = "PUBLIC"
+
+  validation {
+    condition     = contains(["PUBLIC", "CONNECTIONS"], var.post_visibility)
+    error_message = "post_visibility must be PUBLIC or CONNECTIONS."
+  }
+}
+
+variable "dry_run" {
+  description = "Render and log the post without sending it to LinkedIn."
+  type        = bool
+  default     = false
+}
+
+variable "alert_email" {
+  description = <<-EOT
+    Address for failure and token-expiry alerts. Leave empty to create the SNS
+    topic without a subscription and add one by hand later. AWS sends a
+    confirmation mail that must be accepted before alerts arrive.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "token_expiry_warning_days" {
+  description = "Alarm when fewer than this many days of token life remain."
+  type        = number
+  default     = 7
+}
+
+variable "mirror_github_repository" {
+  description = <<-EOT
+    "owner/repo" of the content repository allowed to write the S3 mirror via
+    GitHub OIDC. Leave empty to skip creating the mirror role.
+  EOT
+  type        = string
+  default     = ""
+}
