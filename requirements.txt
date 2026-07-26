@@ -1,0 +1,8 @@
+# Runtime dependencies.
+#
+# The Lambda runtime already ships boto3, so it is intentionally absent here:
+# pinning it would only inflate the deployment package. It is listed in
+# requirements-dev.txt instead, for local test runs.
+#
+# The LinkedIn client uses urllib from the standard library rather than
+# requests, so that the deployment package needs no third-party HTTP stack.
