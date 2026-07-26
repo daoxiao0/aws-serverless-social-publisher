@@ -36,6 +36,33 @@ class Response(NamedTuple):
 Transport = Callable[[str, str, dict, bytes | None], Response]
 
 
+#: Characters reserved by LinkedIn's "little text" format, which is what the
+#: commentary field actually accepts. They must be backslash-escaped even when
+#: they are not being used as markup — an unescaped one silently truncates the
+#: post from that point on, with a 201 Created and no warning.
+#:
+#: '#' is handled separately: escaping it would turn hashtags into plain text.
+LITTLE_TEXT_RESERVED = frozenset("\\|{}@[]()<>*_~")
+
+
+def escape_little_text(text: str) -> str:
+    """Escape reserved characters so LinkedIn publishes the text verbatim.
+
+    A hash mark directly followed by a word is left alone, so that hashtags
+    keep working; every other hash mark is escaped.
+    """
+    out = []
+    for index, char in enumerate(text):
+        if char == "#":
+            following = text[index + 1] if index + 1 < len(text) else ""
+            out.append(char if following.isalnum() else "\\#")
+        elif char in LITTLE_TEXT_RESERVED:
+            out.append("\\" + char)
+        else:
+            out.append(char)
+    return "".join(out)
+
+
 class LinkedInError(RuntimeError):
     """A LinkedIn API call failed."""
 
@@ -171,13 +198,17 @@ class LinkedInClient:
         return self._person_urn
 
     def create_post(self, text: str, *, author: str | None = None, visibility: str = "PUBLIC") -> str:
-        """Publish `text` and return the URN of the created post."""
+        """Publish `text` and return the URN of the created post.
+
+        Escaping happens here rather than in the renderer: it is an encoding
+        detail of this API, not a property of the content.
+        """
         response = self._request(
             "POST",
             "/rest/posts",
             body={
                 "author": author or self.person_urn(),
-                "commentary": text,
+                "commentary": escape_little_text(text),
                 "visibility": visibility,
                 "distribution": {
                     "feedDistribution": "MAIN_FEED",
@@ -214,7 +245,7 @@ class LinkedInClient:
             body={
                 "actor": author or self.person_urn(),
                 "object": post_urn,
-                "message": {"text": text},
+                "message": {"text": escape_little_text(text)},
             },
         )
         return response.headers.get("x-restli-id", "")
