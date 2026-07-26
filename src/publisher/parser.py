@@ -41,6 +41,15 @@ class PostFormatError(ValueError):
     """The source file does not match the expected structure."""
 
 
+def state_key(day: int) -> str:
+    """The DynamoDB partition key for a given day.
+
+    Defined once. Building this string in two places is how a post gets looked
+    up under an identifier nothing ever stored it under.
+    """
+    return "POST#DAY%02d" % day
+
+
 @dataclass(frozen=True)
 class Post:
     """One day's post, as read from the source file."""
@@ -53,7 +62,7 @@ class Post:
     @property
     def key(self) -> str:
         """Stable identifier used as the DynamoDB partition key."""
-        return f"POST#DAY{self.day:02d}"
+        return state_key(self.day)
 
 
 def parse(text: str) -> Post:

@@ -92,9 +92,3 @@ class PublicationState:
             },
         )
 
-    def first_unpublished(self, keys: list[str]) -> str | None:
-        """The earliest key in `keys` that has not been published yet."""
-        for key in keys:
-            if self.status_of(key) != PUBLISHED:
-                return key
-        return None

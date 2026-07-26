@@ -93,17 +93,3 @@ def test_mark_failed_truncates_long_errors():
     assert len(table.items["POST#DAY01"]["last_error"]) == 1000
 
 
-def test_first_unpublished_skips_published_posts():
-    table = FakeTable(
-        {
-            "POST#DAY01": {"pk": "POST#DAY01", "status": PUBLISHED},
-            "POST#DAY02": {"pk": "POST#DAY02", "status": PUBLISHED},
-        }
-    )
-    state = PublicationState(table)
-    assert state.first_unpublished(["POST#DAY01", "POST#DAY02", "POST#DAY03"]) == "POST#DAY03"
-
-
-def test_first_unpublished_returns_none_when_the_backlog_is_empty():
-    table = FakeTable({"POST#DAY01": {"pk": "POST#DAY01", "status": PUBLISHED}})
-    assert PublicationState(table).first_unpublished(["POST#DAY01"]) is None

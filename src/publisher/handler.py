@@ -13,11 +13,11 @@ from datetime import datetime, timezone
 
 import boto3
 
-from .content import ContentStore
+from .content import ContentStore, day_number
 from .linkedin import LinkedInClient, TokenExpiredError, introspect
-from .parser import parse
+from .parser import parse, state_key
 from .renderer import render
-from .state import AlreadyPublishedError, PublicationState
+from .state import PUBLISHED, AlreadyPublishedError, PublicationState
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -39,7 +39,7 @@ def lambda_handler(event, context):  # noqa: ARG001 - signature fixed by Lambda
     store = ContentStore(session.client("s3"), settings.bucket, settings.prefix)
     state = PublicationState(session.resource("dynamodb").Table(settings.table))
 
-    key = state.first_unpublished(store.list_posts())
+    key = next_unpublished(store, state)
     if key is None:
         logger.info("nothing left to publish")
         return {"published": False, "reason": "backlog empty"}
@@ -77,6 +77,20 @@ def lambda_handler(event, context):  # noqa: ARG001 - signature fixed by Lambda
     state.mark_published(post.key, urn)
     logger.info("published %s as %s", post.key, urn)
     return {"published": True, "post": post.key, "urn": urn}
+
+
+def next_unpublished(store: ContentStore, state: PublicationState) -> str | None:
+    """The storage key of the earliest post that has not gone out yet.
+
+    Storage keys and state keys are different namespaces: the object is
+    `posts/day13_title.md`, the state row is `POST#DAY13`. Looking a post up
+    by its storage key silently finds nothing, so every post looks unpublished
+    and the run always picks the first file.
+    """
+    for object_key in store.list_posts():
+        if state.status_of(state_key(day_number(object_key))) != PUBLISHED:
+            return object_key
+    return None
 
 
 class Settings:
