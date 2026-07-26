@@ -152,3 +152,34 @@ Recorded as ADRs, including the alternatives that were rejected and why.
 ## License
 
 MIT
+
+---
+
+<details>
+<summary>日本語</summary>
+
+英語版が正です。この節は概要のみで、更新が遅れることがあります。
+
+**Markdown で書いた記事を、AWS のサーバーレス構成で SNS に定時配信するフレームワーク。**
+現在 LinkedIn へ平日毎朝1本、**本番稼働中**です。
+
+内容を書く場所と配信する仕組みを分離しています。記事は Git リポジトリで管理し、
+AWS 側はそれを読んで配信するだけの層に徹します。同じ原稿を書き直さずに配信先を
+増やせる構成です。
+
+**使用サービス**
+Lambda / EventBridge Scheduler / DynamoDB / S3 / Secrets Manager / CloudWatch / SNS / IAM。
+IaC は Terraform、CI は GitHub Actions（OIDC 認証・アクセスキー不使用）。
+実行時の外部依存はゼロ（boto3 はランタイム同梱、HTTP は標準ライブラリ）。
+
+**設計判断は ADR として残しています**（英語・上の表）。採用した案だけでなく、
+**棄却した案とその理由**を書いています。
+
+**実測した運用制約**
+
+- アクセストークンは60日で失効し、self-serve 枠では自動更新できない。失効を
+  「事故」ではなく「予定」として扱い、残7日で通知する
+- コメント投稿 API はパートナー限定（403 を実測で確認）。用語解説は本文に統合した
+- 月額 **USD 0.40〜0.80**。ほぼ全額が Secrets Manager
+
+</details>
