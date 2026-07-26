@@ -19,6 +19,7 @@ is already written.
 | Delete your own post | **Yes** — `DELETE /rest/posts/{urn}` |
 | Read your own identity | **Yes** — `GET /v2/userinfo` |
 | Check when the token expires | **Yes** — `POST /oauth/v2/introspectToken` |
+| **Read your own posts back** | **No** — partner-gated, so you cannot verify what you published |
 | **Comment on a post** | **No** — partner-gated, see below |
 | **Refresh token** | **No** — partner-gated, see below |
 | Rate limit | 150 requests per day per member |

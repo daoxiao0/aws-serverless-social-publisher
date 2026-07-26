@@ -25,6 +25,32 @@ resource "aws_cloudwatch_metric_alarm" "publish_failed" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 
+# Nothing being published is not an error, so nothing else notices it. A
+# selection bug once made every run return "already published" and exit
+# cleanly; without this alarm the pipeline would have gone quiet for good
+# while reporting success.
+#
+# Three consecutive empty days, so a weekend on a weekday schedule does not
+# fire it: Saturday and Sunday are two, and Monday publishing clears them.
+# Running out of backlog also fires this, which is intended.
+resource "aws_cloudwatch_metric_alarm" "nothing_published" {
+  alarm_name          = "${local.name}-nothing-published"
+  alarm_description   = "No post has gone out for three days. The pipeline may be failing silently."
+  namespace           = "SocialPublisher"
+  metric_name         = "PostsPublished"
+  statistic           = "Sum"
+  period              = 86400
+  evaluation_periods  = 3
+  datapoints_to_alarm = 3
+  threshold           = 1
+  comparison_operator = "LessThanThreshold"
+
+  # No metric at all is the failure being watched for, not an absence of
+  # information.
+  treat_missing_data = "breaching"
+  alarm_actions      = [aws_sns_topic.alerts.arn]
+}
+
 # The token cannot be refreshed programmatically, so this alarm is the only
 # thing standing between an expiry and a week of silent 401s.
 # See docs/adr/0004-access-token-lifecycle.md.

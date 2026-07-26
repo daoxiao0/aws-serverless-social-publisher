@@ -148,6 +148,7 @@ Recorded as ADRs, including the alternatives that were rejected and why.
 | [0003](docs/adr/0003-glossary-inline.md) | The glossary is published inline, because commenting is partner-gated |
 | [0004](docs/adr/0004-access-token-lifecycle.md) | Token expiry is a scheduled event, and is read from LinkedIn rather than recorded |
 | [0005](docs/adr/0005-trust-github-by-immutable-ids.md) | CI is trusted by immutable repository ID, not by name |
+| [0006](docs/adr/0006-verifying-what-was-published.md) | Publishing can fail without saying so, so silence is what gets alarmed |
 
 ## License
 

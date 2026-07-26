@@ -75,6 +75,7 @@ def lambda_handler(event, context):  # noqa: ARG001 - signature fixed by Lambda
         raise
 
     state.mark_published(post.key, urn)
+    _report_published(session)
     logger.info("published %s as %s", post.key, urn)
     return {"published": True, "post": post.key, "urn": urn}
 
@@ -120,6 +121,21 @@ class Settings:
             )
         except KeyError as missing:
             raise RuntimeError("missing required environment variable: %s" % missing) from missing
+
+
+def _report_published(session) -> None:
+    """Emit a heartbeat so silence becomes detectable.
+
+    Every early return in this function is a legitimate outcome that produces
+    no error and no log line worth alarming on — an empty backlog, a post
+    already claimed, a dry run. That is precisely how a broken pipeline can
+    report success indefinitely. An alarm on the absence of this metric is the
+    only thing that notices. See docs/adr/0006-verifying-what-was-published.md.
+    """
+    session.client("cloudwatch").put_metric_data(
+        Namespace=METRIC_NAMESPACE,
+        MetricData=[{"MetricName": "PostsPublished", "Value": 1, "Unit": "Count"}],
+    )
 
 
 def _load_secret(session, secret_id: str) -> dict:
