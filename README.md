@@ -3,9 +3,8 @@
 Publish Markdown posts to social platforms on a schedule, using AWS Lambda,
 EventBridge Scheduler, DynamoDB, and Secrets Manager. Terraform included.
 
-> **Status: work in progress.** The content pipeline (parsing, rendering) and
-> the LinkedIn client are implemented and tested. Infrastructure and the
-> scheduled handler are landing next. Not yet deployable end to end.
+> **Status: running in production**, publishing to LinkedIn on a weekday
+> schedule. X and Threads support is not written yet.
 
 ## Why this exists
 
@@ -79,6 +78,19 @@ Verify your token before deploying anything:
 ```bash
 python scripts/check_access.py
 ```
+
+Then:
+
+```bash
+cd infrastructure/terraform
+cp terraform.tfvars.example terraform.tfvars   # edit it
+terraform init && terraform apply
+```
+
+Populate the secret with the token, and copy
+[examples/mirror-content.yml](examples/mirror-content.yml) into the repository
+holding your posts so it syncs them to S3 on every push. Leave `dry_run = true`
+for the first run: it exercises the whole pipeline and publishes nothing.
 
 ## Limitations worth knowing before you start
 

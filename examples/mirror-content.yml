@@ -1,0 +1,59 @@
+# Copy this into the repository that holds your posts, as
+# .github/workflows/mirror-content.yml
+#
+# It keeps the publisher's S3 bucket in step with that repository, which stays
+# the source of truth. Set two repository secrets first:
+#
+#   AWS_MIRROR_ROLE_ARN   terraform output mirror_role_arn
+#   AWS_CONTENT_BUCKET    terraform output content_bucket
+#
+# No AWS access key is involved: the job authenticates with GitHub OIDC.
+
+name: Mirror content to S3
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "path/to/posts/**" # adjust to where your posts live
+  workflow_dispatch:
+
+permissions:
+  id-token: write # required to request the OIDC token
+  contents: read
+
+concurrency:
+  group: mirror-content
+  cancel-in-progress: true
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # If this fails with "Not authorized to perform
+      # sts:AssumeRoleWithWebIdentity", print the token's `sub` claim and
+      # compare it with the trust policy before changing anything else.
+      # GitHub issues subjects containing immutable numeric IDs, which a
+      # name-based trust policy does not match. See
+      # docs/adr/0005-trust-github-by-immutable-ids.md.
+      - name: Assume the mirror role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_MIRROR_ROLE_ARN }}
+          aws-region: ap-northeast-1
+
+      # --delete keeps renames from leaving orphans behind in the bucket.
+      - name: Sync posts
+        run: |
+          aws s3 sync 'path/to/posts' 's3://${{ secrets.AWS_CONTENT_BUCKET }}/posts/' \
+            --exclude '*' \
+            --include 'day*.md' \
+            --delete \
+            --no-progress
+
+      - name: Report what the bucket now holds
+        run: |
+          count=$(aws s3 ls 's3://${{ secrets.AWS_CONTENT_BUCKET }}/posts/' --recursive | wc -l)
+          echo "### Mirrored $count posts" >> "$GITHUB_STEP_SUMMARY"

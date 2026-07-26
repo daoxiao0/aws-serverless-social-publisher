@@ -79,3 +79,29 @@ variable "mirror_github_repository" {
   type        = string
   default     = ""
 }
+
+variable "mirror_subject_patterns" {
+  description = <<-EOT
+    Patterns the OIDC `sub` claim must match to assume the mirror role. Empty
+    derives the legacy name-based pattern from mirror_github_repository.
+
+    GitHub now issues subjects carrying immutable numeric IDs, such as
+    "repo:owner@123/repo@456:ref:refs/heads/main". A trust policy written
+    against the name-only form fails with "Not authorized to perform
+    sts:AssumeRoleWithWebIdentity" against such a repository. Matching on the
+    IDs is also the stronger choice: names can be released and re-registered
+    by somebody else, IDs cannot.
+  EOT
+  type        = list(string)
+  default     = []
+}
+
+variable "create_github_oidc_provider" {
+  description = <<-EOT
+    Create the GitHub OIDC provider. It is account-wide and only one may
+    exist, so set this to false if another stack already created it, and the
+    existing one will be looked up instead.
+  EOT
+  type        = bool
+  default     = false
+}
