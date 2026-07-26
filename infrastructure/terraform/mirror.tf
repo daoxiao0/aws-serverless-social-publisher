@@ -19,14 +19,17 @@ locals {
   ) : null
 }
 
-# AWS validates GitHub's certificate against its own trusted CA library, so no
-# thumbprint is pinned here. A hardcoded thumbprint would break the day GitHub
-# rotates its certificate.
+# AWS validates GitHub's certificate against its own trusted CA library and
+# fills in a thumbprint by itself. Pinning one here would produce a permanent
+# diff, and would break the day GitHub rotates its certificate.
 resource "aws_iam_openid_connect_provider" "github" {
-  count           = local.create_oidc ? 1 : 0
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = []
+  count          = local.create_oidc ? 1 : 0
+  url            = "https://token.actions.githubusercontent.com"
+  client_id_list = ["sts.amazonaws.com"]
+
+  lifecycle {
+    ignore_changes = [thumbprint_list]
+  }
 }
 
 data "aws_iam_openid_connect_provider" "github" {
