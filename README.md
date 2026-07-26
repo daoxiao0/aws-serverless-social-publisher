@@ -20,15 +20,15 @@ can be authored once and delivered anywhere.
 
 ```mermaid
 flowchart TB
-    MD["Content repository<br/><i>source of truth</i>"]
-    S3[("S3<br/><i>mirror</i>")]
-    SCH["EventBridge Scheduler<br/><i>weekdays, your timezone</i>"]
-    LAMBDA["Lambda<br/><i>publisher</i>"]
-    SM[("Secrets Manager<br/><i>token + client credentials</i>")]
-    DDB[("DynamoDB<br/><i>publication state</i>")]
+    MD["Content repository<br/>source of truth"]
+    S3[("S3<br/>mirror")]
+    SCH["EventBridge Scheduler<br/>weekdays, your timezone"]
+    LAMBDA["Lambda<br/>publisher"]
+    SM[("Secrets Manager<br/>token + client credentials")]
+    DDB[("DynamoDB<br/>publication state")]
     LI["LinkedIn API"]
-    CW["CloudWatch<br/><i>logs, metrics, alarms</i>"]
-    SNS(["SNS<br/><i>failure and expiry alerts</i>"])
+    CW["CloudWatch<br/>logs, metrics, alarms"]
+    SNS(["SNS<br/>failure and expiry alerts"])
 
     MD -->|"GitHub Actions, OIDC, on push"| S3
     SCH --> LAMBDA
