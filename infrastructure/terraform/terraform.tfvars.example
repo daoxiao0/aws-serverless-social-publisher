@@ -16,3 +16,10 @@ mirror_github_repository = "owner/content-repo"
 
 # Set true for the first deployment to exercise the pipeline without posting.
 dry_run = true
+
+# Threads publishes on the same schedule, offset five minutes so its logs
+# and alarms are easy to tell apart from LinkedIn's. Independent dry_run
+# flag: a new platform's first deploy should not inherit an
+# already-proven platform's "go live" setting.
+threads_schedule_expression = "cron(5 8 ? * MON-FRI *)"
+threads_dry_run             = true

@@ -16,6 +16,7 @@ on:
     branches: [main]
     paths:
       - "path/to/posts/**" # adjust to where your posts live
+      - "path/to/shorts/**" # only if you're also deploying the Threads Lambda
   workflow_dispatch:
 
 permissions:
@@ -48,6 +49,17 @@ jobs:
       - name: Sync posts
         run: |
           aws s3 sync 'path/to/posts' 's3://${{ secrets.AWS_CONTENT_BUCKET }}/posts/' \
+            --exclude '*' \
+            --include 'day*.md' \
+            --delete \
+            --no-progress
+
+      # Delete this step if you are not deploying the Threads Lambda
+      # (ADR-0007). Same bucket, same role, a second prefix — nothing extra
+      # to provision for the mirror itself.
+      - name: Sync shorts
+        run: |
+          aws s3 sync 'path/to/shorts' 's3://${{ secrets.AWS_CONTENT_BUCKET }}/shorts/' \
             --exclude '*' \
             --include 'day*.md' \
             --delete \

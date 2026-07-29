@@ -9,12 +9,11 @@ The HTTP layer is injectable so the tests never touch the network.
 from __future__ import annotations
 
 import json
-import urllib.error
 import urllib.parse
-import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Callable, NamedTuple
+
+from .http import Response, Transport, urllib_transport  # re-exported for callers and tests
 
 API_BASE = "https://api.linkedin.com"
 
@@ -25,15 +24,6 @@ OAUTH_BASE = "https://www.linkedin.com"
 #: LinkedIn versions its API by month. Bump deliberately, not automatically:
 #: a version LinkedIn has sunset returns 400 on every call.
 API_VERSION = "202607"
-
-
-class Response(NamedTuple):
-    status: int
-    headers: dict
-    body: str
-
-
-Transport = Callable[[str, str, dict, bytes | None], Response]
 
 
 #: Characters reserved by LinkedIn's "little text" format, which is what the
@@ -87,18 +77,6 @@ class PermissionDeniedError(LinkedInError):
 
 class RateLimitedError(LinkedInError):
     """Too many requests. The member limit is 150 per day."""
-
-
-def urllib_transport(method: str, url: str, headers: dict, body: bytes | None) -> Response:
-    """Default transport, built on the standard library."""
-    request = urllib.request.Request(url, data=body, method=method)
-    for name, value in headers.items():
-        request.add_header(name, value)
-    try:
-        with urllib.request.urlopen(request) as response:
-            return Response(response.status, dict(response.headers), response.read().decode("utf-8", "replace"))
-    except urllib.error.HTTPError as error:
-        return Response(error.code, dict(error.headers), error.read().decode("utf-8", "replace"))
 
 
 @dataclass(frozen=True)

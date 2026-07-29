@@ -25,3 +25,12 @@ output "mirror_role_arn" {
   description = "Role for the content repository's GitHub Actions workflow."
   value       = local.mirror_enabled ? aws_iam_role.mirror[0].arn : null
 }
+
+output "threads_token_secret_id" {
+  description = "Populate this with the access token and user id before the first run."
+  value       = aws_secretsmanager_secret.threads_token.name
+}
+
+output "threads_function_name" {
+  value = aws_lambda_function.threads_publisher.function_name
+}

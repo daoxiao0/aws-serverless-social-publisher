@@ -85,3 +85,26 @@ resource "aws_secretsmanager_secret" "linkedin_token" {
   # name reserved for a month if it was intentional.
   recovery_window_in_days = 7
 }
+
+# ---------------------------------------------------------------------------
+# Threads access token
+#
+# Same out-of-band population as linkedin_token, plus user_id (Threads posts
+# are addressed by numeric user id, not by an author URN resolved from the
+# token). Unlike linkedin_token, the Threads Lambda also writes to this
+# secret — see ADR-0007 — so its IAM policy grants PutSecretValue as well as
+# GetSecretValue.
+#
+#   aws secretsmanager put-secret-value \
+#     --secret-id <name> \
+#     --secret-string '{"access_token":"...","user_id":"...","expires_at":"2026-09-27T00:00:00Z"}'
+#
+# See docs/setup-threads-app.md.
+# ---------------------------------------------------------------------------
+
+resource "aws_secretsmanager_secret" "threads_token" {
+  name        = "${local.name}/threads-token"
+  description = "Threads access token, user id, and expiry. Populated out of band."
+
+  recovery_window_in_days = 7
+}

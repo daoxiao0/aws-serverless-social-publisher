@@ -66,13 +66,18 @@ resource "aws_iam_role_policy" "mirror" {
   name  = "${local.name}-mirror"
   role  = aws_iam_role.mirror[0].id
 
+  # Both content prefixes: the CI workflow syncs LinkedIn posts and Threads
+  # derivatives in the same job (mirror-aws-posts.yml, content repository).
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = ["s3:PutObject", "s3:DeleteObject"]
-        Resource = "${aws_s3_bucket.content.arn}/${var.content_prefix}*"
+        Effect = "Allow"
+        Action = ["s3:PutObject", "s3:DeleteObject"]
+        Resource = [
+          "${aws_s3_bucket.content.arn}/${var.content_prefix}*",
+          "${aws_s3_bucket.content.arn}/${var.threads_content_prefix}*",
+        ]
       },
       {
         Effect   = "Allow"

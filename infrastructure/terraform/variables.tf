@@ -17,9 +17,15 @@ variable "region" {
 }
 
 variable "content_prefix" {
-  description = "Key prefix inside the content bucket where posts are mirrored."
+  description = "Key prefix inside the content bucket where LinkedIn posts are mirrored."
   type        = string
   default     = "posts/"
+}
+
+variable "threads_content_prefix" {
+  description = "Key prefix inside the content bucket where Threads derivatives (/aws-shorts output) are mirrored."
+  type        = string
+  default     = "shorts/"
 }
 
 variable "schedule_expression" {
@@ -53,6 +59,28 @@ variable "dry_run" {
   description = "Render and log the post without sending it to LinkedIn."
   type        = bool
   default     = false
+}
+
+variable "threads_schedule_expression" {
+  description = <<-EOT
+    When to publish to Threads. Offset five minutes from schedule_expression
+    (LinkedIn) by default so the two platforms' CloudWatch log streams and
+    alarm evaluations do not land in the same minute — they are independent
+    Lambdas with no shared state to race over, this is purely for readability
+    when reading logs later.
+  EOT
+  type        = string
+  default     = "cron(5 8 ? * MON-FRI *)"
+}
+
+variable "threads_dry_run" {
+  description = <<-EOT
+    Render and log the Threads post without sending it. Defaults to true,
+    independently of dry_run (LinkedIn) — a new platform's first deploy
+    should not inherit an already-proven platform's "go live" setting.
+  EOT
+  type        = bool
+  default     = true
 }
 
 variable "alert_email" {
