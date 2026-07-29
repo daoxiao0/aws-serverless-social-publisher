@@ -1,6 +1,6 @@
 import pytest
 
-from publisher.parser import Post, PostFormatError, parse
+from publisher.linkedin.parser import Post, PostFormatError, parse
 
 SAMPLE = """# ■ Day13 S3静的ホスティング
 

@@ -2,7 +2,7 @@
 
 /aws-shorts is instructed not to use Markdown emphasis in the Threads
 section, because Threads displays asterisks literally rather than rendering
-them — the same failure LinkedIn's renderer strips defensively (renderer.py).
+them — the same failure LinkedIn's renderer strips defensively (linkedin/renderer.py).
 This does the same, on the chance a future edit slips one in anyway.
 """
 
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 
-from .shorts_parser import ThreadsPost
+from .parser import ThreadsPost
 
 #: Threads rejects text past this length. Measured, not documented: past this
 #: point the API returns a bare HTTP 500 with no length-specific message,

@@ -1,6 +1,6 @@
 """Lambda entry point: publish the next scheduled Threads post.
 
-A second, independent Lambda alongside handler.py (LinkedIn) rather than a
+A second, independent Lambda alongside linkedin/handler.py rather than a
 branch inside it — see ADR-0007. Invoked by its own EventBridge Scheduler
 rule. One invocation publishes at most one post, and doing nothing is a valid
 outcome — an empty backlog is not an error.
@@ -15,11 +15,11 @@ from datetime import datetime, timezone
 
 import boto3
 
-from .content import ContentStore, day_number
-from .shorts_parser import ShortsFormatError, parse, threads_state_key
-from .state import PUBLISHED, AlreadyPublishedError, PublicationState
-from .threads import RefreshedToken, ThreadsClient, TokenExpiredError, refresh_token
-from .threads_renderer import render
+from ..content import ContentStore, day_number
+from ..state import PUBLISHED, AlreadyPublishedError, PublicationState
+from .client import RefreshedToken, ThreadsClient, TokenExpiredError, refresh_token
+from .parser import ShortsFormatError, parse, threads_state_key
+from .renderer import render
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -58,7 +58,7 @@ def lambda_handler(event, context):  # noqa: ARG001 - signature fixed by Lambda
 
     text = render(post)
 
-    # Claim before posting, never after — see handler.py (LinkedIn) for why.
+    # Claim before posting, never after — see linkedin/handler.py for why.
     try:
         state.claim(post.key)
     except AlreadyPublishedError:
@@ -94,9 +94,9 @@ def lambda_handler(event, context):  # noqa: ARG001 - signature fixed by Lambda
 def next_unpublished(store: ContentStore, state: PublicationState) -> str | None:
     """The storage key of the earliest Threads derivative not yet posted.
 
-    Keyed through threads_state_key(), not parser.py's LinkedIn-only
+    Keyed through threads_state_key(), not linkedin/parser.py's LinkedIn-only
     state_key() — the same day number identifies two independent
-    publications now, one per platform (see shorts_parser.py).
+    publications now, one per platform (see this package's parser.py).
     """
     for object_key in store.list_posts():
         if state.status_of(threads_state_key(day_number(object_key))) != PUBLISHED:

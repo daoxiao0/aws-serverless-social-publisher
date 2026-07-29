@@ -1,7 +1,7 @@
 import pytest
 
-from publisher.shorts_parser import ThreadsPost
-from publisher.threads_renderer import MAX_LENGTH, PostTooLongError, render, strip_markdown
+from publisher.threads.parser import ThreadsPost
+from publisher.threads.renderer import MAX_LENGTH, PostTooLongError, render, strip_markdown
 
 
 def make_post(body="body text") -> ThreadsPost:

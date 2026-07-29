@@ -37,7 +37,7 @@ class ShortsFormatError(ValueError):
 def threads_state_key(day: int) -> str:
     """The DynamoDB partition key for a given day's Threads post.
 
-    A distinct namespace from LinkedIn's ``POST#DAY%02d`` (parser.py): the
+    A distinct namespace from LinkedIn's ``POST#DAY%02d`` (linkedin/parser.py): the
     same day number now identifies two independent publications, one per
     platform, and they must be claimed and tracked separately — publishing
     day16 to Threads must not read as "day16 already published" for LinkedIn,

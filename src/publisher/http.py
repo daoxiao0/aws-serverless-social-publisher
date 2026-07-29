@@ -1,6 +1,6 @@
 """Minimal HTTP transport shared by every platform client.
 
-Extracted from ``linkedin.py`` once a second platform (Threads) needed the
+Extracted from ``linkedin/client.py`` once a second platform (Threads) needed the
 same request/response shape. Both clients inject a :data:`Transport` so their
 tests never touch the network.
 """

@@ -11,7 +11,7 @@ from test_state import FakeTable
 
 from publisher.content import ContentStore
 from publisher.state import PUBLISHED, PublicationState
-from publisher.threads_handler import next_unpublished
+from publisher.threads.handler import next_unpublished
 
 KEYS = ["shorts/day01_a.md", "shorts/day02_b.md", "shorts/day03_c.md"]
 

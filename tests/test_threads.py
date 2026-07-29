@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from publisher.threads import (
+from publisher.threads.client import (
     PermissionDeniedError,
     RateLimitedError,
     Response,

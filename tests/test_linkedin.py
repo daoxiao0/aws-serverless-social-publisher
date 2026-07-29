@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from publisher.linkedin import (
+from publisher.linkedin.client import (
     LinkedInClient,
     LinkedInError,
     PermissionDeniedError,

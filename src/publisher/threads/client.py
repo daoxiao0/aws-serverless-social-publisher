@@ -5,7 +5,7 @@ it by its ``creation_id`` — a shape designed for media that takes time to
 process. Text-only posts do not need the extra round trip, but the API does
 not offer a shortcut, so both calls happen every time.
 
-Unlike LinkedIn (see ``linkedin.py``), Threads issues a refresh token: a
+Unlike LinkedIn (see ``linkedin/client.py``), Threads issues a refresh token: a
 long-lived token is valid 60 days and can be exchanged for a new 60-day token
 at any point after the first 24 hours. See ADR-0007 for why that changes how
 this client's expiry handling differs from LinkedIn's.
@@ -18,7 +18,7 @@ import urllib.parse
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
-from .http import Response, Transport, urllib_transport  # re-exported for callers and tests
+from ..http import Response, Transport, urllib_transport  # re-exported for callers and tests
 
 GRAPH_BASE = "https://graph.threads.net/v1.0"
 
@@ -42,7 +42,7 @@ class TokenExpiredError(ThreadsError):
 
     Unlike LinkedIn's version of this error, this one is reachable only after
     a refresh attempt has already failed — see refresh_if_needed() in
-    threads_handler.py. Retrying the post itself is still pointless.
+    handler.py. Retrying the post itself is still pointless.
     """
 
 
@@ -72,7 +72,7 @@ def refresh_token(
 
     Meta allows this any time after the token is 24 hours old, and it does
     not invalidate the token being refreshed. Called on a schedule (see
-    threads_handler.py) rather than only on failure, so the token in Secrets
+    handler.py) rather than only on failure, so the token in Secrets
     Manager rarely gets close to expiry at all.
     """
     transport = transport or urllib_transport

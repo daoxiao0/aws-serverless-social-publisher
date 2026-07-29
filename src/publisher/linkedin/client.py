@@ -13,7 +13,7 @@ import urllib.parse
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from .http import Response, Transport, urllib_transport  # re-exported for callers and tests
+from ..http import Response, Transport, urllib_transport  # re-exported for callers and tests
 
 API_BASE = "https://api.linkedin.com"
 

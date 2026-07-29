@@ -2,6 +2,10 @@
 
 **Status:** Accepted (2026-07-29)
 
+> `src/publisher/` was reorganized into `linkedin/` and `threads/` subpackages
+> the same day, once this ADR made the platform-by-platform symmetry obvious.
+> File names below reflect that layout.
+
 ## Context
 
 A second content source exists: `/aws-shorts` in the content repository takes
@@ -12,12 +16,12 @@ different file structure from `posts/day{NN}_{theme}.md` — platform sections
 glossary — and Threads is the only one of the four derivatives this project
 has a publishing target for today.
 
-Two designs were available: add Threads to the existing `handler.py`/
-`linkedin.py` pair as a second branch, or add a second, parallel pipeline.
+Two designs were available: add Threads to the existing `linkedin/handler.py`/
+`linkedin/client.py` pair as a second branch, or add a second, parallel pipeline.
 
 ## Decision
 
-**Threads is a second Lambda (`threads_handler.py`), its own EventBridge
+**Threads is a second Lambda (`threads/handler.py`), its own EventBridge
 Scheduler rule, its own IAM role, and its own Secrets Manager secret** —
 structurally a sibling of the LinkedIn pipeline, not a feature inside it.
 Both share the S3 content bucket and the DynamoDB state table, under a
@@ -26,7 +30,7 @@ distinct prefix and a distinct key namespace respectively:
 | | LinkedIn | Threads |
 | --- | --- | --- |
 | Source prefix | `posts/` | `shorts/` |
-| Parser | `parser.py` | `shorts_parser.py` |
+| Parser | `linkedin/parser.py` | `threads/parser.py` |
 | State key | `POST#DAY{NN}` | `THREADS#DAY{NN}` |
 | Metric | `PostsPublished` | `ThreadsPostsPublished` |
 | Lambda | `publisher-prod` | `publisher-prod-threads` |
@@ -41,7 +45,7 @@ treats LinkedIn's 60-day expiry as a scheduled human event, because a
 self-serve LinkedIn app has no refresh token at all. Threads is different: a
 long-lived token can be exchanged for a new 60-day one at any point after its
 first 24 hours, and doing so does not invalidate the token being replaced.
-`threads_handler.py` refreshes at 14 days remaining — wide margin, since
+`threads/handler.py` refreshes at 14 days remaining — wide margin, since
 refreshing early costs nothing — and writes the new token back to Secrets
 Manager. The `threads-token-expiring` alarm (monitoring.tf) is deliberately
 set at the same threshold as LinkedIn's for symmetry, but firing it means the
@@ -50,7 +54,7 @@ calendar reminder is due. The IAM policy reflects this: the Threads Lambda
 role grants `secretsmanager:PutSecretValue` on its own secret, which the
 LinkedIn role never needed.
 
-**Only the Threads section is parsed and published.** `shorts_parser.py`
+**Only the Threads section is parsed and published.** `threads/parser.py`
 reads `## Threads（日本語）` and nothing else. X and the two Shorts scripts sit
 in the same source file for a human to copy by hand or feed into
 `Shorts-Factory/` (a separate pipeline, in the AI-Operating-System
@@ -61,7 +65,7 @@ the kind of premature scope this project has avoided elsewhere — see the
 
 ## Alternatives considered
 
-- **Branch inside `handler.py`/`linkedin.py`.** Rejected: the two source
+- **Branch inside `linkedin/handler.py`/`linkedin/client.py`.** Rejected: the two source
   formats parse differently, the token lifecycles differ enough that sharing
   the check-and-alert logic would need a platform flag running through it
   anyway, and a bug or a schedule change in one platform's code path should

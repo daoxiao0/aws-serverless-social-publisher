@@ -1,7 +1,7 @@
 import pytest
 
-from publisher.parser import Post
-from publisher.renderer import (
+from publisher.linkedin.parser import Post
+from publisher.linkedin.renderer import (
     MAX_LENGTH,
     PostTooLongError,
     render,

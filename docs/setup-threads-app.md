@@ -117,7 +117,7 @@ aws secretsmanager put-secret-value \
   --secret-string file://secret.json   # then delete the file
 ```
 
-Set `expires_at` to 60 days from generation. After that, `threads_handler.py`
+Set `expires_at` to 60 days from generation. After that, `threads/handler.py`
 maintains it: every invocation refreshes the token once fewer than 14 days
 remain and overwrites this same secret with the new token and its real
 expiry, so the hand-written date only matters until the first refresh.

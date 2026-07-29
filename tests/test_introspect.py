@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from publisher.linkedin import LinkedInError, Response, TokenInfo, introspect
+from publisher.linkedin.client import LinkedInError, Response, TokenInfo, introspect
 
 
 def transport_returning(status=200, payload=None, recorder=None):

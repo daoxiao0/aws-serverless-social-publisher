@@ -9,7 +9,7 @@ from test_content import FakeS3
 from test_state import FakeTable
 
 from publisher.content import ContentStore
-from publisher.handler import next_unpublished
+from publisher.linkedin.handler import next_unpublished
 from publisher.state import PUBLISHED, PublicationState
 
 KEYS = ["posts/day01_a.md", "posts/day02_b.md", "posts/day03_c.md"]

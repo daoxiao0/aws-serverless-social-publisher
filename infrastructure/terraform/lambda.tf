@@ -10,7 +10,7 @@ data "archive_file" "function" {
 resource "aws_lambda_function" "publisher" {
   function_name    = local.name
   role             = aws_iam_role.lambda.arn
-  handler          = "publisher.handler.lambda_handler"
+  handler          = "publisher.linkedin.handler.lambda_handler"
   runtime          = "python3.12"
   filename         = data.archive_file.function.output_path
   source_code_hash = data.archive_file.function.output_base64sha256
@@ -126,7 +126,7 @@ resource "aws_iam_role_policy" "lambda" {
 resource "aws_lambda_function" "threads_publisher" {
   function_name    = "${local.name}-threads"
   role             = aws_iam_role.threads_lambda.arn
-  handler          = "publisher.threads_handler.lambda_handler"
+  handler          = "publisher.threads.handler.lambda_handler"
   runtime          = "python3.12"
   filename         = data.archive_file.function.output_path
   source_code_hash = data.archive_file.function.output_base64sha256

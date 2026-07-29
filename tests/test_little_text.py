@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from publisher.linkedin import LinkedInClient, Response, escape_little_text
+from publisher.linkedin.client import LinkedInClient, Response, escape_little_text
 
 
 class Recorder:

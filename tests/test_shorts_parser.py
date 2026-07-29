@@ -1,6 +1,6 @@
 import pytest
 
-from publisher.shorts_parser import ShortsFormatError, ThreadsPost, parse, threads_state_key
+from publisher.threads.parser import ShortsFormatError, ThreadsPost, parse, threads_state_key
 
 SAMPLE = """# ■ Day16 Lambda環境変数（派生元: posts/day16_Lambda環境変数.md）
 
